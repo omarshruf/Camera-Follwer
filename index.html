@@ -22,9 +22,9 @@
         }
 
         async function detectPeople() {
-            console.log("Loading model..."); // Debugging message
+            console.log("Loading model...");
             const model = await cocoSsd.load();
-            console.log("Model loaded successfully!"); // Debugging message
+            console.log("Model loaded successfully!");
 
             const video = await setupCamera();
             video.play();
@@ -39,11 +39,12 @@
                 const predictions = await model.detect(video);
 
                 let personDetected = false;
+                let personX = null;
+
                 predictions.forEach(prediction => {
                     if (prediction.class === "person") {
                         personDetected = true;
-                        console.log("✅ Person Detected!"); // Print to console when a person is detected
-
+                        personX = prediction.bbox[0]; // X position of detected person
                         ctx.strokeStyle = "red";
                         ctx.lineWidth = 4;
                         ctx.strokeRect(...prediction.bbox);
@@ -52,15 +53,23 @@
                     }
                 });
 
-                if (!personDetected) {
-                    console.log("❌ No person detected."); // Print to console when no person is detected
-                }
-
-                // Send message to App Inventor WebViewer
                 if (personDetected) {
-                    window.AppInventor.setWebViewString("person_detected");
+                    let screenMiddle = video.width / 2;
+                    if (personX < screenMiddle * 0.4) {
+                        console.log("⬅ Person on the LEFT");
+                        window.AppInventor.setWebViewString("left");
+                    } else if (personX > screenMiddle * 1.6) {
+                        console.log("➡ Person on the RIGHT");
+                        window.AppInventor.setWebViewString("right");
+                    } else {
+                        console.log("⬆ Person in CENTER");
+                        window.AppInventor.setWebViewString("center");
+                    }
+                } else {
+                    console.log("❌ No person detected.");
+                    window.AppInventor.setWebViewString("none");
                 }
-            }, 100);
+            }, 1000);
         }
 
         detectPeople();
