@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Person Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+</head>
+<body>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        async function setupCamera() {
+            const video = document.getElementById('video');
+            video.width = 640;
+            video.height = 480;
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            return new Promise((resolve) => {
+                video.onloadedmetadata = () => resolve(video);
+            });
+        }
+
+        async function detectPeople() {
+            console.log("Loading model..."); // Debugging message
+            const model = await cocoSsd.load();
+            console.log("Model loaded successfully!"); // Debugging message
+
+            const video = await setupCamera();
+            video.play();
+
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.width;
+            canvas.height = video.height;
+
+            setInterval(async () => {
+                ctx.drawImage(video, 0, 0, video.width, video.height);
+                const predictions = await model.detect(video);
+
+                let personDetected = false;
+                predictions.forEach(prediction => {
+                    if (prediction.class === "person") {
+                        personDetected = true;
+                        console.log("✅ Person Detected!"); // Print to console when a person is detected
+
+                        ctx.strokeStyle = "red";
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(...prediction.bbox);
+                        ctx.fillStyle = "red";
+                        ctx.fillText("Person", prediction.bbox[0], prediction.bbox[1] - 10);
+                    }
+                });
+
+                if (!personDetected) {
+                    console.log("❌ No person detected."); // Print to console when no person is detected
+                }
+
+                // Send message to App Inventor WebViewer
+                if (personDetected) {
+                    window.AppInventor.setWebViewString("person_detected");
+                }
+            }, 100);
+        }
+
+        detectPeople();
+    </script>
+</body>
+</html>
